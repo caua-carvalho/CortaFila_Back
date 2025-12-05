@@ -19,6 +19,13 @@ class UserController
         echo json_encode($result);
     }
 
+    public function findById($id)
+    {
+        $id = $id['id'];
+        $result = $this->users->findById($id);
+        echo json_encode($result);
+    }
+
     public function store()
     {
         $body = json_decode(file_get_contents('php://input'), true);

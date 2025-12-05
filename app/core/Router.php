@@ -5,30 +5,39 @@ namespace Core;
 class Router
 {
     private array $routes = [
-        'GET' => [],
-        'POST' => [],
-        'PUT' => [],
-        'DELETE' => []
+        'GET'     => [],
+        'POST'    => [],
+        'PUT'     => [],
+        'DELETE'  => []
     ];
 
     public function get(string $path, string $handler)
     {
-        $this->routes['GET'][$this->normalize($path)] = $handler;
+        $this->addRoute('GET', $path, $handler);
     }
 
     public function post(string $path, string $handler)
     {
-        $this->routes['POST'][$this->normalize($path)] = $handler;
+        $this->addRoute('POST', $path, $handler);
     }
 
     public function put(string $path, string $handler)
     {
-        $this->routes['PUT'][$this->normalize($path)] = $handler;
+        $this->addRoute('PUT', $path, $handler);
     }
 
     public function delete(string $path, string $handler)
     {
-        $this->routes['DELETE'][$this->normalize($path)] = $handler;
+        $this->addRoute('DELETE', $path, $handler);
+    }
+
+    private function addRoute(string $method, string $path, string $handler)
+    {
+        $this->routes[$method][] = [
+            'path'    => $this->normalize($path),
+            'regex'   => $this->pathToRegex($path),
+            'handler' => $handler
+        ];
     }
 
     private function normalize(string $path)
@@ -36,35 +45,61 @@ class Router
         return '/' . trim($path, '/');
     }
 
+    private function pathToRegex(string $path): string
+    {
+        $path = $this->normalize($path);
+
+        // transforma /users/{id} em /users/(?P<id>[^/]+)
+        $regex = preg_replace('/\{([^}]+)\}/', '(?P<$1>[^/]+)', $path);
+
+        return '#^' . $regex . '$#';
+    }
+
     public function dispatch()
-    {   
+    {
         $method = $_SERVER['REQUEST_METHOD'];
         $path   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $baseDir = '/CortaFila_Back/public';
-        // Remove o caminho base definido
+
         if (defined('BASE_PATH')) {
             $path = str_replace(BASE_PATH, '', $path);
         }
 
-        // Normaliza o path final
+        // Normaliza path
         $path = $this->normalize($path);
 
-
-        if (!isset($this->routes[$method][$path])) {
+        if (!isset($this->routes[$method])) {
             http_response_code(404);
             echo json_encode(['error' => 'Route not found']);
             exit;
         }
 
-        $handler = $this->routes[$method][$path];
+        foreach ($this->routes[$method] as $route) {
 
-        // Formato esperado: "Controller@method"
+            if (preg_match($route['regex'], $path, $matches)) {
+
+                // extrai só os parâmetros nomeados
+                $params = array_filter(
+                    $matches,
+                    fn($key) => !is_int($key),
+                    ARRAY_FILTER_USE_KEY
+                );
+
+                return $this->executeHandler($route['handler'], $params);
+            }
+        }
+
+        http_response_code(404);
+        echo json_encode(['error' => 'Route not found']);
+        exit;
+    }
+
+    private function executeHandler(string $handler, array $params)
+    {
         if (!str_contains($handler, '@')) {
             throw new \Exception("Handler inválido: use Controller@method");
         }
 
         [$controllerName, $methodName] = explode('@', $handler);
-
         $controllerClass = "\\App\\Controllers\\{$controllerName}";
 
         if (!class_exists($controllerClass)) {
@@ -74,9 +109,10 @@ class Router
         $controller = new $controllerClass();
 
         if (!method_exists($controller, $methodName)) {
-            throw new \Exception("Método {$methodName} não encontrado no controller {$controllerClass}");
+            throw new \Exception("Método {$methodName} não encontrado em {$controllerClass}");
         }
 
-        return $controller->{$methodName}();
+        // passa params diretamente pro método
+        return $controller->{$methodName}($params);
     }
 }
