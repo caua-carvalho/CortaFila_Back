@@ -61,7 +61,7 @@ class Router
         $path   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
         if (defined('BASE_PATH')) {
-            $path = str_replace(BASE_PATH, '', $path);
+            $path = str_replace(search: BASE_PATH, replace: '', subject: $path);
         }
 
         // Normaliza path
