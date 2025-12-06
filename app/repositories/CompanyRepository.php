@@ -4,7 +4,7 @@ namespace App\Repositories;
 
 use App\Services\SupabaseClient;
 
-class UserRepository
+class CompanyRepository
 {
     private SupabaseClient $client;
 
@@ -15,29 +15,28 @@ class UserRepository
 
     public function all()
     {
-        return $this->client->select('users');
+        return $this->client->select('companies');
     }
 
     public function findById(string $id)
     {
-        return $this->client->select('users', [
+        return $this->client->select('companies', [
             'id' => "eq.$id"
         ]);
     }
 
     public function create(array $data)
     {
-        return $this->client->insert('users', [$data]);
+        return $this->client->insert('companies', [$data]);
     }
-
 
     public function update(string $id, array $data)
     {
-        return $this->client->update('users', [$data], "id=eq.$id");
+        return $this->client->update('companies', [$data], "id=eq.$id");
     }
 
     public function delete(string $id)
     {
-        return $this->client->delete('users', "id=eq.$id");
+        return $this->client->delete('companies', "id=eq.$id");
     }
 }
