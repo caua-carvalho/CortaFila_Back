@@ -9,4 +9,4 @@ $router->get('/professional/show', 'ProfessionalController@show');   // exemplo
 $router->get('/users', 'UserController@index');
 $router->get('/users/{id}', 'UserController@findById');
 
-$router->post('/companys/create', 'CompanyController@create');
+$router->post('/company/create', 'CompanyController@create');
