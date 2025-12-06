@@ -46,7 +46,7 @@ class SupabaseClient
         $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $error    = curl_error($curl);
 
-        curl_close($curl);
+        unset($curl);
 
         return [
             'status' => $httpCode,
