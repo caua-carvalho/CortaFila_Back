@@ -18,6 +18,27 @@ class UserController
         $result = $this->users->all();
         echo json_encode($result);
     }
+    
+    public function login()
+    {
+        $body = json_decode(file_get_contents('php://input'), true);
+
+        $user = $body['user'] ?? null; 
+
+        if (!isset($user['phone']) || !isset($user['password'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Credenciais inválidas'
+            ]);
+            return;
+        }
+
+        $auth = new \App\Services\AuthService();
+        $result = $auth->login($user['phone'], $user['password']);
+
+        echo json_encode($result);
+    }
+
 
     public function findById($id)
     {

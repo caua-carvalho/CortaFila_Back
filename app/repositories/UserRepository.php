@@ -25,6 +25,15 @@ class UserRepository
         ]);
     }
 
+    
+    public function findByPhone(string $phone)
+    {
+        return $this->client->select('users', [
+            'phone' => "eq.$phone"
+        ]);
+    }
+
+
     public function create(array $data)
     {
         return $this->client->insert('users', [$data]);
