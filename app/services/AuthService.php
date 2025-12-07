@@ -35,7 +35,7 @@ class AuthService
             ];
         }
 
-        if ($password !== $user['password']) {
+        if (!password_verify($password, $user['password'])) {
             return [
                 'success' => false,
                 'message' => 'Senha incorreta',

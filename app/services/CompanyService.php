@@ -74,6 +74,7 @@ class CompanyService
         // 2) Criar admin vinculado à empresa
         $userData['company_id'] = $companyId;
         $userData['role'] = 'admin';
+        $userData['password'] = password_hash($userData['password'], PASSWORD_DEFAULT);
 
         $userResult = $this->users->create($userData);
         $userNorm = $this->normalizeResult($userResult);
