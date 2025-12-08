@@ -9,16 +9,18 @@ class CompanyService
 {
     private CompanyRepository $companies;
     private UserRepository $users;
+    private \App\Services\SupabaseClient $supabase;
 
     public function __construct()
     {
         $this->companies = new CompanyRepository();
         $this->users = new UserRepository();
+        $this->supabase = new \App\Services\SupabaseClient();
     }
 
     private function normalizeResult(array $result): array
     {
-        // Erro direto do Supabase ou falha de rede
+        // Erro direto do Supabase
         if (!empty($result['error'])) {
             return [
                 'data'   => null,
@@ -27,22 +29,31 @@ class CompanyService
             ];
         }
 
-        // Resposta sem "data" ou vazia → insert/select falhou silenciosamente
-        if (!isset($result['data']) || empty($result['data'])) {
+        // Caso RPC: retorno direto em result['data'] (objeto)
+        if (isset($result['data']) && !isset($result['data'][0])) {
             return [
-                'data'   => null,
-                'error'  => 'Empty response from database',
+                'data'   => $result['data'], // é um único objeto
+                'error'  => null,
                 'status' => $result['status'] ?? null
             ];
         }
 
-        // Resposta OK, retornar primeira linha (Supabase sempre retorna array)
+        // Caso retorno padrão Supabase (arrays)
+        if (isset($result['data'][0])) {
+            return [
+                'data'   => $result['data'][0],
+                'error'  => null,
+                'status' => $result['status'] ?? null
+            ];
+        }
+
         return [
-            'data'   => $result['data'][0],
-            'error'  => null,
+            'data'   => null,
+            'error'  => 'Empty response from database',
             'status' => $result['status'] ?? null
         ];
     }
+
 
 
 
@@ -57,44 +68,47 @@ class CompanyService
             ];
         }
 
-        // 1) Criar empresa
-        $companyResult = $this->companies->create($companyData);
-        $companyNorm = $this->normalizeResult($companyResult);
+        // Sanitização mínima
+        $companyName   = $companyData['name']   ?? null;
+        $companyAddress = $companyData['address'] ?? null;
 
-        if ($companyNorm['error']) {
+        $userName  = $userData['name']  ?? null;
+        $userEmail = $userData['email'] ?? null;
+        $userPhone = $userData['phone'] ?? null;
+        $password  = $userData['password'] ?? null;
+
+        if (!$companyName || !$userName || !$userEmail || !$password) {
             return [
-                'error'   => 'Company creation failed',
-                'details' => $companyNorm
+                'error' => 'Missing required fields for company or user.'
             ];
         }
 
-        $company = $companyNorm['data'];
-        $companyId = $company['id'];
+        // Hash da senha ANTES de chamar o banco
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-        // 2) Criar admin vinculado à empresa
-        $userData['company_id'] = $companyId;
-        $userData['role'] = 'admin';
-        $userData['password'] = password_hash($userData['password'], PASSWORD_DEFAULT);
-
-        $userResult = $this->users->create($userData);
-        $userNorm = $this->normalizeResult($userResult);
-
-        if ($userNorm['error']) {
-            // rollback de empresa caso user falhe
-            $this->companies->delete($companyId);
-
-            return [
-                'error'   => 'Admin user creation failed',
-                'details' => $userNorm
-            ];
-        }
-
-        $user = $userNorm['data'];
-
-        // 3) Final response estruturada
-        return [
-            'company' => $company,
-            'user'    => $user
+        // Payload RPC para o Supabase
+        $rpcPayload = [
+            "p_company_name"   => $companyName,
+            "p_company_address" => $companyAddress,
+            "p_user_name"      => $userName,
+            "p_user_email"     => $userEmail,
+            "p_user_phone"     => $userPhone,
+            "p_user_password"  => $hashedPassword
         ];
+
+        // Chamada RPC
+        $response = $this->supabase->rpc("create_company_with_admin", $rpcPayload);
+
+        $norm = $this->normalizeResult($response);
+
+        if ($norm['error']) {
+            return [
+                'error'   => 'Failed to create company/admin via RPC',
+                'details' => $norm
+            ];
+        }
+
+        // Sucesso
+        return $norm['data'];
     }
 }
