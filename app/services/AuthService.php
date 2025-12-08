@@ -3,21 +3,25 @@
 namespace App\Services;
 
 use App\Repositories\UserRepository;
+use App\Utils\JwtHelper;
 
 class AuthService
 {
     private UserRepository $users;
 
+    private JwtHelper $JwtHelper;
+
     public function __construct()
     {
         $this->users = new UserRepository();
+        $this->JwtHelper = new JwtHelper();
     }
 
     public function login(string $phone, string $password): array
     {
         $res = $this->users->findByPhone($phone);
 
-        
+
 
         if ($res['status'] !== 200 || empty($res['data'])) {
             return [
@@ -44,16 +48,21 @@ class AuthService
             ];
         }
 
+        $payload = [
+            'id'         => $user['id'],
+            'company_id' => $user['company_id'],
+            'role'       => $user['role'],
+            'name'       => $user['name'],
+            'email'      => $user['email'],
+            'phone'      => $user['phone']
+        ];
+
+        $jwt = $this->JwtHelper->encode($payload);
+
         return [
             'success' => true,
-            'user' => [
-                'id'         => $user['id'],
-                'company_id' => $user['company_id'],
-                'role'       => $user['role'],
-                'name'       => $user['name'],
-                'email'      => $user['email'],
-                'phone'      => $user['phone']
-            ]
+            'token' => $jwt,
+            'user' => $payload
         ];
     }
 }
