@@ -71,6 +71,14 @@ class SupabaseClient
         return $this->request('POST', $table, $data);
     }
 
+    public function rpc(string $func, array $params = [])
+    {
+        $url = "rpc/" . $func;
+
+        return $this->request('POST', $url, $params);
+    }
+
+
     public function update(string $table, array $data, string $filter): array
     {
         return $this->request('PATCH', "{$table}?{$filter}", $data);
