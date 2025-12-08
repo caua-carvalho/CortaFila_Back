@@ -16,10 +16,11 @@ class Router
         $this->addRoute('GET', $path, $handler);
     }
 
-    public function post(string $path, string $handler)
+    public function post(string $path, string $handler, array $middlewares = [])
     {
-        $this->addRoute('POST', $path, $handler);
+        $this->addRoute('POST', $path, $handler, $middlewares);
     }
+
 
     public function put(string $path, string $handler)
     {
@@ -31,12 +32,13 @@ class Router
         $this->addRoute('DELETE', $path, $handler);
     }
 
-    private function addRoute(string $method, string $path, string $handler)
+    private function addRoute(string $method, string $path, string $handler, array $middlewares = [])
     {
         $this->routes[$method][] = [
-            'path'    => $this->normalize($path),
-            'regex'   => $this->pathToRegex($path),
-            'handler' => $handler
+            'path'        => $this->normalize($path),
+            'regex'       => $this->pathToRegex($path),
+            'handler'     => $handler,
+            'middlewares' => $middlewares
         ];
     }
 
@@ -77,7 +79,15 @@ class Router
 
             if (preg_match($route['regex'], $path, $matches)) {
 
-                // extrai só os parâmetros nomeados
+                // RUN MIDDLEWARES
+                if (!empty($route['middlewares'])) {
+                    foreach ($route['middlewares'] as $middlewareClass) {
+                        $middleware = new $middlewareClass();
+                        $middleware->handle();
+                    }
+                }
+
+                // extrai parâmetros
                 $params = array_filter(
                     $matches,
                     fn($key) => !is_int($key),
@@ -87,6 +97,7 @@ class Router
                 return $this->executeHandler($route['handler'], $params);
             }
         }
+
 
         http_response_code(404);
         echo json_encode(['error' => 'Route not found']);
