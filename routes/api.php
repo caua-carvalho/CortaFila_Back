@@ -11,6 +11,7 @@ $router->get('/professional/show', 'ProfessionalController@show');   // exemplo
 $router->get('/users', 'UserController@index');
 $router->get('/users/{id}', 'UserController@findById');
 $router->post('/users/login', 'UserController@login');
+$router->post('/users/validate', 'UserController@validate');
 
 // COMPANY
 $router->post('/company/create', 'CompanyController@store');

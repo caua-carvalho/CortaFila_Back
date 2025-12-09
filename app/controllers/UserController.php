@@ -55,4 +55,23 @@ class UserController
 
         echo json_encode($result);
     }
+
+    public function validate() {
+        $body = json_decode(file_get_contents('php://input'), true);
+
+        $jwt = $body['token'] ?? null;
+
+        if (!$jwt) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Token não fornecido'
+            ]);
+            return;
+        }
+
+        $auth = new \App\Services\AuthService();
+        $result = $auth->validateToken($jwt);
+
+        echo json_encode($result);
+    }
 }

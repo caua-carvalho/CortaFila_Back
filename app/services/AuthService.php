@@ -65,4 +65,20 @@ class AuthService
             'user' => $payload
         ];
     }
+
+    public function validateToken(string $token): array
+    {
+        try {
+            $decoded = $this->JwtHelper->decode($token);
+            return [
+                'success' => true,
+                'data' => (array) $decoded
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Token inválido: ' . $e->getMessage()
+            ];
+        }
+    }
 }
