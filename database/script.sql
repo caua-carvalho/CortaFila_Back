@@ -38,7 +38,7 @@ CREATE TABLE public.companies (
   id integer NOT NULL DEFAULT nextval('companies_id_seq'::regclass),
   name character varying NOT NULL,
   created_at timestamp without time zone DEFAULT now(),
-  adress text,
+  address text,
   CONSTRAINT companies_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.professional_blocked_times (
@@ -94,9 +94,10 @@ CREATE TABLE public.users (
   name character varying NOT NULL,
   email character varying NOT NULL UNIQUE,
   role character varying NOT NULL CHECK (role::text = ANY (ARRAY['admin'::character varying, 'employee'::character varying]::text[])),
-  phone character varying,
+  phone character varying UNIQUE,
   avatar text,
   created_at timestamp without time zone DEFAULT now(),
+  password text,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id)
 );
