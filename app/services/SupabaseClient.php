@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Utils\Debug;
+
 class SupabaseClient
 {
     private string $url;
@@ -9,7 +11,6 @@ class SupabaseClient
 
     public function __construct()
     {
-        // Puxa direto do .env
         $this->url = rtrim($_ENV['SUPABASE_URL'] ?? '', '/');
         $this->key = $_ENV['SUPABASE_KEY'] ?? '';
 
@@ -20,10 +21,19 @@ class SupabaseClient
 
     private function request(string $method, string $endpoint, array $body = []): array
     {
+        $fullUrl = "{$this->url}/rest/v1/{$endpoint}";
+
+        Debug::log([
+            "type"   => "SUPABASE_REQUEST",
+            "method" => strtoupper($method),
+            "url"    => $fullUrl,
+            "body"   => $body
+        ]);
+
         $curl = curl_init();
 
         $options = [
-            CURLOPT_URL            => "{$this->url}/rest/v1/{$endpoint}",
+            CURLOPT_URL            => $fullUrl,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => [
                 "apikey: {$this->key}",
@@ -31,9 +41,9 @@ class SupabaseClient
                 "Content-Type: application/json",
                 "Prefer: return=representation"
             ],
-            CURLOPT_CUSTOMREQUEST   => $method,
-            CURLOPT_SSL_VERIFYPEER  => true,
-            CURLOPT_SSL_VERIFYHOST  => 2
+            CURLOPT_CUSTOMREQUEST  => $method,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
         ];
 
         if (!empty($body)) {
@@ -46,12 +56,22 @@ class SupabaseClient
         $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $error    = curl_error($curl);
 
-        unset($curl);
+        curl_close($curl);
+
+        $json = json_decode($response, true);
+
+        Debug::log([
+            "type"          => "SUPABASE_RESPONSE",
+            "status"        => $httpCode,
+            "response_raw"  => $response,
+            "response_json" => $json,
+            "curl_error"    => $error
+        ]);
 
         return [
             'status' => $httpCode,
             'error'  => $error ?: null,
-            'data'   => json_decode($response, true)
+            'data'   => $json
         ];
     }
 
@@ -71,13 +91,10 @@ class SupabaseClient
         return $this->request('POST', $table, $data);
     }
 
-    public function rpc(string $func, array $params = [])
+    public function rpc(string $func, array $params = []): array
     {
-        $url = "rpc/" . $func;
-
-        return $this->request('POST', $url, $params);
+        return $this->request('POST', "rpc/{$func}", $params);
     }
-
 
     public function update(string $table, array $data, string $filter): array
     {
