@@ -35,7 +35,10 @@ class EmployeeService
         $exists = $this->users->findByEmailAndCompany($payload['email'], $companyId);
 
         if (!empty($exists['data'])) {
-            return ['success' => false, 'message' => 'Já existe um funcionário com este e-mail.'];
+            return ['success' => false,
+                    'message' => 'Já existe um funcionário com este e-mail.',
+                    'inputs'  => 'email'
+                   ];
         }
 
         $newUser = [
