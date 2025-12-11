@@ -90,7 +90,7 @@ class EmployeeService
             return ['success' => false, 'message' => 'FRONTEND_URL não definido no .env'];
         }
 
-        $inviteLink = "{$frontendUrl}/invite/{$token}";
+        $inviteLink = "{$frontendUrl}/definir-senha?token={$token}";
         Debug::log(['invite link' => $inviteLink]);
 
         $emailSent = $this->mailer->sendEmployeeInvite(
@@ -154,6 +154,33 @@ class EmployeeService
         return [
             'success' => true,
             'message' => 'Conta ativada com sucesso.'
+        ];
+    }
+
+    public function findByToken($token)
+    {
+        $invite = $this->invites->findValidToken($token);
+
+        if (empty($invite['data'][0])) {
+            return [
+                'success' => false,
+                'message' => 'Convite inválido ou expirado.'
+            ];
+        }
+
+        $inviteData = $invite['data'][0];
+
+        if ($inviteData['expires_at'] <= date('c')) {
+            return [
+                'success' => false,
+                'message' => 'Convite expirado.'
+            ];
+        }
+
+        $user = $this->users->findById($inviteData['user_id']);
+
+        return [
+            'user' => $user
         ];
     }
 }

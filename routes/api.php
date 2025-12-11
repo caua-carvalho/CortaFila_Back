@@ -20,3 +20,6 @@ $router->post('/company/create', 'CompanyController@store');
 $router->post('/employee/create', 'EmployeeController@create', [
     AuthMiddleware::class
 ]);
+
+$router->get('/employees/invite-info/{token}', 'EmployeeController@findEmployeeByToken');
+$router->post('/employees/complete-invite', 'EmployeeController@activateEmployee');
