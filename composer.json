@@ -6,7 +6,7 @@
             "Core\\": "app/core/"
         },
         "files": [
-            "app/utils/Debug.php"
+            "app/Utils/Debug.php"
         ]
     },
     "authors": [
