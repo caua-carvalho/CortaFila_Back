@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Repositories\UserRepository;
 use App\Repositories\InviteRepository;
 use App\Services\MailService;
-use App\Utils\Debug;
 
 class EmployeeService
 {
@@ -25,22 +24,17 @@ class EmployeeService
      */
     public function createEmployee(array $payload, int $companyId): array
     {
-        Debug::log(['payload recebido' => $payload]);
-
         if (
             empty($payload['name']) ||
             empty($payload['email']) ||
             empty($payload['phone'])
         ) {
-            Debug::log('payload incompleto');
             return ['success' => false, 'message' => 'Dados incompletos.'];
         }
 
         $exists = $this->users->findByEmailAndCompany($payload['email'], $companyId);
-        Debug::log(['findByEmailAndCompany' => $exists]);
 
         if (!empty($exists['data'])) {
-            Debug::log('email já existe');
             return ['success' => false, 'message' => 'Já existe um funcionário com este e-mail.'];
         }
 
@@ -54,13 +48,9 @@ class EmployeeService
             'status'     => 'pending'
         ];
 
-        Debug::log(['insert user payload' => $newUser]);
-
         $userInsert = $this->users->create($newUser);
-        Debug::log(['result insert user' => $userInsert]);
 
         if (empty($userInsert['data'][0]['id'])) {
-            Debug::log('failed insert user');
             return ['success' => false, 'message' => 'Erro ao criar funcionário.'];
         }
 
@@ -73,33 +63,25 @@ class EmployeeService
             'expires_at' => date('c', strtotime('+48 hours'))
         ];
 
-        Debug::log(['insert invite payload' => $invitePayload]);
-
         $inviteInsert = $this->invites->create($invitePayload);
-        Debug::log(['result insert invite' => $inviteInsert]);
 
         if (!empty($inviteInsert['error'])) {
-            Debug::log(['erro insert invite' => $inviteInsert]);
             return ['success' => false, 'message' => 'Erro ao gerar convite.'];
         }
 
         $frontendUrl = $_ENV['FRONTEND_URL'] ?? null;
 
         if (!$frontendUrl) {
-            Debug::log('FRONTEND_URL não definido');
             return ['success' => false, 'message' => 'FRONTEND_URL não definido no .env'];
         }
 
         $inviteLink = "{$frontendUrl}/definir-senha?token={$token}";
-        Debug::log(['invite link' => $inviteLink]);
 
         $emailSent = $this->mailer->sendEmployeeInvite(
             to: $payload['email'],
             name: $payload['name'],
             inviteLink: $inviteLink
         );
-
-        Debug::log(['email enviado?' => $emailSent]);
 
         if (!$emailSent) {
             return [
