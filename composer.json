@@ -3,7 +3,7 @@
     "autoload": {
         "psr-4": {
             "App\\": "app/",
-            "Core\\": "app/core/"
+            "Core\\": "app/Core/"
         },
         "files": [
             "app/Utils/Debug.php"

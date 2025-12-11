@@ -1,6 +1,6 @@
 <?php
 
-namespace App\infra;
+namespace App\Infra;
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
