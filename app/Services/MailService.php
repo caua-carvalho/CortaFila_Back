@@ -2,30 +2,19 @@
 
 namespace App\Services;
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
 class MailService
 {
-    private PHPMailer $mailer;
+    private string $apiKey;
+    private string $from;
 
     public function __construct()
     {
-        $this->mailer = new PHPMailer(true);
-        $this->configure();
-    }
+        $this->apiKey = $_ENV['RESEND_API_KEY'] ?? '';
+        $this->from   = $_ENV['MAIL_FROM'] ?? 'no-reply@cortafila.com';
 
-    private function configure(): void
-    {
-        $this->mailer->isSMTP();
-        $this->mailer->Host       = $_ENV['SMTP_HOST'] ?? '';
-        $this->mailer->SMTPAuth   = true;
-        $this->mailer->Username   = $_ENV['SMTP_USER'] ?? '';
-        $this->mailer->Password   = $_ENV['SMTP_PASS'] ?? '';
-        $this->mailer->SMTPSecure = $_ENV['SMTP_SECURE'] ?? 'tls'; // tls recomendado
-        $this->mailer->Port       = (int)($_ENV['SMTP_PORT'] ?? 587);
-
-        $this->mailer->CharSet = 'UTF-8';
+        if (!$this->apiKey) {
+            error_log("MailService ERROR: RESEND_API_KEY ausente.");
+        }
     }
 
     /**
@@ -33,52 +22,90 @@ class MailService
      */
     public function sendEmployeeInvite(string $to, string $name, string $inviteLink): bool
     {
-        try {
-
-            // Debug das env
-            error_log("SMTP_ENV_CHECK: host=" . ($_ENV['SMTP_HOST'] ?? 'null') .
-                " port=" . ($_ENV['SMTP_PORT'] ?? 'null') .
-                " user=" . ($_ENV['SMTP_USER'] ?? 'null') .
-                " secure=" . ($_ENV['SMTP_SECURE'] ?? 'null'));
-
-            // debug SMTP real
-            $this->mailer->SMTPDebug = 2;
-            $this->mailer->Debugoutput = function ($line) {
-                error_log("[SMTP_DEBUG] " . trim($line));
-            };
-
-            if (!$to || !$inviteLink) {
-                error_log("MailService: Campos obrigatórios faltando.");
-                return false;
-            }
-
-            $this->mailer->clearAllRecipients();
-
-            $from = $_ENV['SMTP_FROM'] ?? $_ENV['SMTP_USER'] ?? null;
-            $fromName = $_ENV['SMTP_FROM_NAME'] ?? 'Sistema';
-
-            if (!$from) {
-                throw new Exception("SMTP_FROM não configurado no .env");
-            }
-
-            $this->mailer->setFrom($from, $fromName);
-            $this->mailer->addAddress($to, $name);
-
-            $this->mailer->isHTML(true);
-            $this->mailer->Subject = 'Convite para acessar o sistema';
-            $this->mailer->Body = "..."; // omitido
-
-            $result = $this->mailer->send();
-
-            error_log("MAIL_SEND_RESULT=" . ($result ? "OK" : "FAIL"));
-
-            return $result;
-        } catch (Exception $e) {
-            error_log("MailService ERROR: " . $e->getMessage());
-            if (!empty($this->mailer->ErrorInfo)) {
-                error_log("PHPMailer ErrorInfo: " . $this->mailer->ErrorInfo);
-            }
+        if (!$to || !$inviteLink) {
+            error_log("MailService ERROR: parâmetros obrigatórios faltando.");
             return false;
         }
+
+        $html = $this->buildInviteTemplate($name, $inviteLink);
+
+        $payload = [
+            "from"    => $this->from,
+            "to"      => [$to],
+            "subject" => "Convite para acessar o sistema CortaFila",
+            "html"    => $html
+        ];
+
+        $ch = curl_init("https://api.resend.com/emails");
+
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$this->apiKey}",
+            "Content-Type: application/json"
+        ]);
+
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        $response = curl_exec($ch);
+        $error    = curl_error($ch);
+        $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        curl_close($ch);
+
+        if ($error) {
+            error_log("Resend CURL_ERROR: " . $error);
+            return false;
+        }
+
+        if ($status >= 400) {
+            error_log("Resend API ERROR: HTTP {$status} - {$response}");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Template do e-mail (HTML).
+     */
+    private function buildInviteTemplate(string $name, string $inviteLink): string
+    {
+        return "
+        <table width='100%' cellpadding='0' cellspacing='0' style='font-family: Montserrat, sans-serif; background:#1f1f1f; color:#fff; padding:20px;'>
+            <tr>
+                <td align='center'>
+                    <table width='600' cellpadding='0' cellspacing='0' style='background:#2b2b2b; border-radius:10px; overflow:hidden;'>
+                        <tr>
+                            <td style='background:#10b981; padding:20px; text-align:center; color:#fff; font-size:24px; font-weight:bold;'>
+                                Convite de acesso para CortaFila
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style='padding:30px; font-size:16px; line-height:1.5;'>
+                                <p>Olá <strong>{$name}</strong>,</p>
+                                <p>Você foi adicionado como funcionário na plataforma <strong>CortaFila</strong>.</p>
+                                <p>Para configurar sua senha e ativar seu acesso, clique no botão abaixo:</p>
+                                <p style='text-align:center; margin:30px 0;'>
+                                    <a href='{$inviteLink}' 
+                                    style='display:inline-block; padding:12px 20px; background:#10b981; color:#fff; font-weight:bold; text-decoration:none; border-radius:8px;'>
+                                        Criar senha
+                                    </a>
+                                </p>
+                                <p style='text-align:center; font-size:14px; color:#aaa;'>Ou copie e cole no navegador:<br/>
+                                <a href='{$inviteLink}' style='color:#4f46e5; word-break:break-all;'>{$inviteLink}</a></p>
+                                <p style='margin-top:20px; font-size:14px; color:#aaa;'>Este link expira em 48 horas.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style='background:#111; text-align:center; padding:15px; font-size:12px; color:#888;'>
+                                &copy; " . date('Y') . " CortaFila. Todos os direitos reservados.
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        ";
     }
 }
