@@ -23,3 +23,11 @@ $router->post('/employee/create', 'EmployeeController@create', [
 
 $router->get('/employees/invite-info/{token}', 'EmployeeController@findEmployeeByToken');
 $router->post('/employees/complete-invite', 'EmployeeController@activateEmployee');
+
+
+// SERVICES
+
+$router->post('/services/create', 'ServiceController@create');
+$router->post('/services/update', 'ServiceController@update');
+$router->post('/services/delete', 'ServiceController@delete');
+$router->get('/services/{id}', 'ServiceController@findById');
