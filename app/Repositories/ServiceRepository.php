@@ -25,14 +25,32 @@ class ServiceRepository
         ]);
     }
 
-    public function create(array $data)
+    public function create(array $payload, string $companyId)
     {
-        return $this->client->insert('services', [$data]);
+        $newService = [
+            'type'          => $payload["type"],
+            'name'          => $payload['name'],
+            'price'         => $payload['price'],
+            'duration'      => $payload['duration'],
+            'description'   => $payload["description"],
+            'company_id'    => $companyId
+        ];
+
+        return $this->client->insert('services', [$newService]);
     }
 
-    public function update(string $id, array $data)
+    public function update(string $id, string $companyId, array $payload)
     {
-        return $this->client->update('services', [$data], "id=eq.$id");
+        $updateService = [
+            'type'          => $payload["type"],
+            'name'          => $payload['name'],
+            'price'         => $payload['price'],
+            'duration'      => $payload['duration'],
+            'description'   => $payload["description"],
+            'company_id'    => $companyId
+        ];
+
+        return $this->client->update('services', [$updateService], "id=eq.$id&company_id=eq.$companyId");
     }
 
     public function delete(string $id)

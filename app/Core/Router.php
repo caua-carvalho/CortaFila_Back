@@ -11,9 +11,9 @@ class Router
         'DELETE'  => []
     ];
 
-    public function get(string $path, string $handler)
+    public function get(string $path, string $handler, array $middlewares = [])
     {
-        $this->addRoute('GET', $path, $handler);
+        $this->addRoute('GET', $path, $handler, $middlewares);
     }
 
     public function post(string $path, string $handler, array $middlewares = [])

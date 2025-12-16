@@ -2,11 +2,17 @@
 
 namespace App\Controllers;
 
-use App\Repositories\UserRepository;
+use App\Repositories\ServiceRepository;
+use App\Core\RequestContext;
 
 class ServiceController
 {
-    private UserRepository $service;
+    private ServiceRepository $service;
+
+    public function __construct()
+    {
+        $this->service = new ServiceRepository();
+    }
 
     public function all()
     {
@@ -29,7 +35,10 @@ class ServiceController
         $id   = $body["id"];
         $data = $body["data"];
 
-        $result  = $this->service->update($id, $data);
+        $auth = RequestContext::get('auth_user');
+        $companyId = $auth['company_id'];
+
+        $result  = $this->service->update($id, $companyId,  $data);
 
         echo json_encode($result);
     }
@@ -38,7 +47,10 @@ class ServiceController
     {
         $body = json_decode(file_get_contents('php://input'), true);
 
-        $result = $this->service->create($body);
+        $auth = RequestContext::get('auth_user');
+        $companyId = $auth['company_id'];
+
+        $result = $this->service->create($body, $companyId);
 
         echo json_encode($result);
     }

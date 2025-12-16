@@ -4,15 +4,29 @@ namespace App\Controllers;
 
 use App\Services\EmployeeService;
 use App\Core\RequestContext;
+use App\Repositories\EmployeeRepository;
 
 class EmployeeController
 {
     private EmployeeService $service;
+    private EmployeeRepository $repository;
+    
     private EmployeeService $invite;
 
     public function __construct()
     {
         $this->service = new EmployeeService();
+        $this->repository = new EmployeeRepository();
+    }
+
+    public function all()
+    {
+        $auth = RequestContext::get('auth_user');
+        $companyId = $auth['company_id'];
+
+        $result = $this->repository->all($companyId);
+
+        echo json_encode($result);
     }
 
     public function create()

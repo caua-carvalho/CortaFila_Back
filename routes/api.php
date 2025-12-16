@@ -21,13 +21,23 @@ $router->post('/employee/create', 'EmployeeController@create', [
     AuthMiddleware::class
 ]);
 
+$router->get('/employee', 'EmployeeController@all', [
+    AuthMiddleware::class
+]);
+
 $router->get('/employees/invite-info/{token}', 'EmployeeController@findEmployeeByToken');
 $router->post('/employees/complete-invite', 'EmployeeController@activateEmployee');
 
 
 // SERVICES
-
-$router->post('/services/create', 'ServiceController@create');
-$router->post('/services/update', 'ServiceController@update');
+$router->post('/services', 'ServiceController@all', [
+    AuthMiddleware::class
+]);
+$router->post('/services/create', 'ServiceController@create', [
+    AuthMiddleware::class
+]);
+$router->post('/services/update', 'ServiceController@update', [
+    AuthMiddleware::class
+]);
 $router->post('/services/delete', 'ServiceController@delete');
 $router->get('/services/{id}', 'ServiceController@findById');
